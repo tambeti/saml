@@ -184,7 +184,7 @@ func (test *IdentityProviderTest) TestCanHandleRequestWithNewSession(c *C) {
 
 	w := httptest.NewRecorder()
 
-	requestURL, err := test.SP.MakeRedirectAuthenticationRequest("ThisIsTheRelayState")
+	requestURL, err := test.SP.MakeRedirectAuthenticationRequest("ThisIsTheRelayState", AuthnRequestOptions{})
 	c.Assert(err, IsNil)
 	c.Assert(requestURL.String(), testsaml.EqualsAny, []interface{}{
 		// go1.5, go1.6
@@ -212,7 +212,7 @@ func (test *IdentityProviderTest) TestCanHandleRequestWithExistingSession(c *C) 
 	}
 
 	w := httptest.NewRecorder()
-	requestURL, err := test.SP.MakeRedirectAuthenticationRequest("ThisIsTheRelayState")
+	requestURL, err := test.SP.MakeRedirectAuthenticationRequest("ThisIsTheRelayState", AuthnRequestOptions{})
 	c.Assert(err, IsNil)
 	c.Assert(requestURL.String(), testsaml.EqualsAny, []interface{}{
 		// go1.5, go1.6
@@ -241,7 +241,7 @@ func (test *IdentityProviderTest) TestCanHandlePostRequestWithExistingSession(c 
 
 	w := httptest.NewRecorder()
 
-	authRequest, err := test.SP.MakeAuthenticationRequest(test.SP.GetSSOBindingLocation(HTTPRedirectBinding))
+	authRequest, err := test.SP.MakeAuthenticationRequest(test.SP.GetSSOBindingLocation(HTTPRedirectBinding), AuthnRequestOptions{})
 	c.Assert(err, IsNil)
 	authRequestBuf, err := xml.Marshal(authRequest)
 	c.Assert(err, IsNil)
@@ -450,13 +450,23 @@ func (test *IdentityProviderTest) TestMakeAssertion(c *C) {
 			Value:  "https://idp.example.com/saml/metadata",
 		},
 		Signature: &xmlsec.Signature{
-			CanonicalizationMethod: xmlsec.Method{Algorithm: "http://www.w3.org/TR/2001/REC-xml-c14n-20010315"},
-			SignatureMethod:        xmlsec.Method{Algorithm: "http://www.w3.org/2000/09/xmldsig#rsa-sha1"},
-			ReferenceTransforms: []xmlsec.Method{
-				{Algorithm: "http://www.w3.org/2000/09/xmldsig#enveloped-signature"},
+			Id: "Signature1",
+			SignedInfo: xmlsec.SignedInfo{
+				CanonicalizationMethod: xmlsec.Method{
+					Algorithm: "http://www.w3.org/2001/10/xml-exc-c14n#",
+				},
+				SignatureMethod: xmlsec.Method{
+					Algorithm: "http://www.w3.org/2000/09/xmldsig#rsa-sha1",
+				},
+				Reference: xmlsec.Reference{
+					ReferenceTransforms: []xmlsec.Method{
+						xmlsec.Method{Algorithm: "http://www.w3.org/2000/09/xmldsig#enveloped-signature"},
+					},
+					DigestMethod: xmlsec.Method{
+						Algorithm: "http://www.w3.org/2000/09/xmldsig#sha1",
+					},
+				},
 			},
-			DigestMethod:    xmlsec.Method{Algorithm: "http://www.w3.org/2000/09/xmldsig#sha1"},
-			DigestValue:     "",
 			SignatureValue:  "",
 			KeyName:         "",
 			X509Certificate: &xmlsec.SignatureX509Data{X509Certificate: "MIIB7zCCAVgCCQDFzbKIp7b3MTANBgkqhkiG9w0BAQUFADA8MQswCQYDVQQGEwJVUzELMAkGA1UECAwCR0ExDDAKBgNVBAoMA2ZvbzESMBAGA1UEAwwJbG9jYWxob3N0MB4XDTEzMTAwMjAwMDg1MVoXDTE0MTAwMjAwMDg1MVowPDELMAkGA1UEBhMCVVMxCzAJBgNVBAgMAkdBMQwwCgYDVQQKDANmb28xEjAQBgNVBAMMCWxvY2FsaG9zdDCBnzANBgkqhkiG9w0BAQEFAAOBjQAwgYkCgYEA1PMHYmhZj308kWLhZVT4vOulqx/9ibm5B86fPWwUKKQ2i12MYtz07tzukPymisTDhQaqyJ8Kqb/6JjhmeMnEOdTvSPmHO8m1ZVveJU6NoKRn/mP/BD7FW52WhbrUXLSeHVSKfWkNk6S4hk9MV9TswTvyRIKvRsw0X/gfnqkroJcCAwEAATANBgkqhkiG9w0BAQUFAAOBgQCMMlIO+GNcGekevKgkakpMdAqJfs24maGb90DvTLbRZRD7Xvn1MnVBBS9hzlXiFLYOInXACMW5gcoRFfeTQLSouMM8o57h0uKjfTmuoWHLQLi6hnF+cvCsEFiJZ4AbF+DgmO6TarJ8O05t8zvnOwJlNCASPZRH/JmF8tX0hoHuAQ=="},
