@@ -195,7 +195,7 @@ func (test *IdentityProviderTest) TestCanHandleRequestWithNewSession(c *C) {
 
 	w := httptest.NewRecorder()
 
-	requestURL, err := test.SP.MakeRedirectAuthenticationRequest("ThisIsTheRelayState", AuthnRequestOptions{})
+	requestURL, err := test.SP.MakeRedirectAuthenticationRequest("ThisIsTheRelayState")
 	c.Assert(err, IsNil)
 	c.Assert(requestURL.String(), testsaml.EqualsAny, []interface{}{
 		// go1.5, go1.6
@@ -223,7 +223,7 @@ func (test *IdentityProviderTest) TestCanHandleRequestWithExistingSession(c *C) 
 	}
 
 	w := httptest.NewRecorder()
-	requestURL, err := test.SP.MakeRedirectAuthenticationRequest("ThisIsTheRelayState", AuthnRequestOptions{})
+	requestURL, err := test.SP.MakeRedirectAuthenticationRequest("ThisIsTheRelayState")
 	c.Assert(err, IsNil)
 	c.Assert(requestURL.String(), testsaml.EqualsAny, []interface{}{
 		// go1.5, go1.6
@@ -252,7 +252,7 @@ func (test *IdentityProviderTest) TestCanHandlePostRequestWithExistingSession(c 
 
 	w := httptest.NewRecorder()
 
-	authRequest, err := test.SP.MakeAuthenticationRequest(test.SP.GetSSOBindingLocation(HTTPRedirectBinding), AuthnRequestOptions{})
+	authRequest, err := test.SP.MakeAuthenticationRequest(test.SP.GetSSOBindingLocation(HTTPRedirectBinding))
 	c.Assert(err, IsNil)
 	authRequestBuf, err := xml.Marshal(authRequest)
 	c.Assert(err, IsNil)
