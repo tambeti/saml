@@ -29,7 +29,7 @@ type ServiceProvider struct {
 	// Key is the RSA private key we use to sign requests.
 	Key string
 
-	// Certificate is the RSA public part of Key.
+	// Certificate is the x509 certificate in base64-d DER format.
 	Certificate string
 
 	// MetadataURL is the full URL to the metadata endpoint on this host,
@@ -63,10 +63,6 @@ const DefaultCacheDuration = time.Hour * 24 * 1
 
 // Metadata returns the service provider metadata
 func (sp *ServiceProvider) Metadata() *Metadata {
-	if cert, _ := pem.Decode([]byte(sp.Certificate)); cert != nil {
-		sp.Certificate = base64.StdEncoding.EncodeToString(cert.Bytes)
-	}
-
 	return &Metadata{
 		EntityID:   sp.MetadataURL,
 		ValidUntil: TimeNow().Add(DefaultValidDuration),

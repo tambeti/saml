@@ -73,12 +73,6 @@ type IdentityProvider struct {
 
 // Metadata returns the metadata structure for this identity provider.
 func (idp *IdentityProvider) Metadata() (*Metadata, error) {
-	cert, _ := pem.Decode([]byte(idp.Certificate))
-	if cert == nil {
-		return nil, fmt.Errorf("invalid IDP certificate")
-	}
-	certStr := base64.StdEncoding.EncodeToString(cert.Bytes)
-
 	return &Metadata{
 		EntityID:      idp.MetadataURL,
 		ValidUntil:    TimeNow().Add(DefaultValidDuration),
@@ -89,13 +83,13 @@ func (idp *IdentityProvider) Metadata() (*Metadata, error) {
 				{
 					Use: "signing",
 					KeyInfo: KeyInfo{
-						Certificate: certStr,
+						Certificate: idp.Certificate,
 					},
 				},
 				{
 					Use: "encryption",
 					KeyInfo: KeyInfo{
-						Certificate: certStr,
+						Certificate: idp.Certificate,
 					},
 					EncryptionMethods: []EncryptionMethod{
 						{Algorithm: "http://www.w3.org/2001/04/xmlenc#aes128-cbc"},

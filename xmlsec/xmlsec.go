@@ -112,12 +112,8 @@ func verify(xml string, publicCert string, id string) error {
 }
 
 // DefaultSignature returns a Signature struct that uses the default c14n and SHA1 settings.
-func DefaultSignature(pemEncodedPublicKey string) Signature {
-	// xmlsec wants the key to be base64-encoded but *not* wrapped with the
-	// PEM flags
-	pemBlock, _ := pem.Decode([]byte(pemEncodedPublicKey))
-	certStr := base64.StdEncoding.EncodeToString(pemBlock.Bytes)
-
+// certificate is an x509 certificate in base64-d DER format.
+func DefaultSignature(certificate string) Signature {
 	return Signature{
 		Id: "Signature1",
 		SignedInfo: SignedInfo{
@@ -137,7 +133,7 @@ func DefaultSignature(pemEncodedPublicKey string) Signature {
 			},
 		},
 		X509Certificate: &SignatureX509Data{
-			X509Certificate: certStr,
+			X509Certificate: certificate,
 		},
 	}
 }
