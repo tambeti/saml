@@ -8,7 +8,7 @@ import (
 
 	"github.com/zenazn/goji"
 
-	"github.com/crewjam/saml/samlidp"
+	"github.com/tambeti/saml/samlidp"
 )
 
 func main() {

@@ -5,7 +5,7 @@ import (
 	"io/ioutil"
 	"net/http"
 
-	"github.com/crewjam/saml/samlsp"
+	"github.com/tambeti/saml/samlsp"
 )
 
 func hello(w http.ResponseWriter, r *http.Request) {

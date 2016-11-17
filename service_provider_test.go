@@ -10,7 +10,7 @@ import (
 
 	. "gopkg.in/check.v1"
 
-	"github.com/crewjam/saml/testsaml"
+	"github.com/tambeti/saml/testsaml"
 )
 
 // Hook up gocheck into the "go test" runner.

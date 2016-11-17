@@ -4,7 +4,7 @@ import (
 	"encoding/xml"
 	"time"
 
-	"github.com/edaniels/go-saml/xmlsec"
+	"github.com/tambeti/saml/xmlsec"
 )
 
 // AuthnRequest represents the SAML object of the same name, a request from a service provider

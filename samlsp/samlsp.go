@@ -10,7 +10,7 @@ import (
 	"net/http"
 	"time"
 
-	"github.com/edaniels/go-saml"
+	"github.com/tambeti/saml"
 )
 
 // Options represents the parameters for creating a new middleware

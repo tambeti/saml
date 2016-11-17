@@ -11,10 +11,10 @@ import (
 	"time"
 
 	"github.com/dgrijalva/jwt-go"
-	"github.com/edaniels/go-saml/xmlsec"
+	"github.com/tambeti/saml/xmlsec"
 	. "gopkg.in/check.v1"
 
-	"github.com/crewjam/saml/testsaml"
+	"github.com/tambeti/saml/testsaml"
 )
 
 type IdentityProviderTest struct {

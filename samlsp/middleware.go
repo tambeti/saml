@@ -13,7 +13,7 @@ import (
 
 	"github.com/dgrijalva/jwt-go"
 
-	"github.com/edaniels/go-saml"
+	"github.com/tambeti/saml"
 )
 
 // Middleware implements middleware than allows a web application

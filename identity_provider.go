@@ -16,7 +16,7 @@ import (
 	"text/template"
 	"time"
 
-	"github.com/edaniels/go-saml/xmlsec"
+	"github.com/tambeti/saml/xmlsec"
 )
 
 // Session represents a user session. It is returned by the
