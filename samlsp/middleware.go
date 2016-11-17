@@ -58,6 +58,14 @@ type Middleware struct {
 const cookieMaxAge = time.Hour // TODO(ross): must be configurable
 const cookieName = "token"
 
+func randomBytes(n int) []byte {
+	rv := make([]byte, n)
+	if _, err := saml.RandReader.Read(rv); err != nil {
+		panic(err)
+	}
+	return rv
+}
+
 // ServeHTTP implements http.Handler and serves the SAML-specific HTTP endpoints
 // on the URIs specified by m.ServiceProvider.MetadataURL and
 // m.ServiceProvider.AcsURL.
@@ -140,7 +148,7 @@ func (m *Middleware) RequireAccount(handler http.Handler) http.Handler {
 			HttpOnly: false,
 			Path:     acsURL.Path,
 		})
-		redirectURL := req.Redirect(relayState)
+		redirectURL, _ := req.Redirect(relayState)
 
 		w.Header().Add("Location", redirectURL.String())
 		w.WriteHeader(http.StatusFound)
