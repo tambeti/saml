@@ -3,6 +3,7 @@
 package samlsp
 
 import (
+	"crypto/rsa"
 	"encoding/xml"
 	"fmt"
 	"io/ioutil"
@@ -16,7 +17,7 @@ import (
 // Options represents the parameters for creating a new middleware
 type Options struct {
 	URL               string
-	Key               string
+	Key               *rsa.PrivateKey
 	Certificate       string
 	AllowIDPInitiated bool
 	IDPMetadata       *saml.Metadata

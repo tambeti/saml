@@ -3,6 +3,7 @@ package saml
 import (
 	"bytes"
 	"compress/flate"
+	"crypto/rsa"
 	"encoding/base64"
 	"encoding/pem"
 	"encoding/xml"
@@ -27,7 +28,7 @@ import (
 // the service provider interface.
 type ServiceProvider struct {
 	// Key is the RSA private key we use to sign requests.
-	Key string
+	Key *rsa.PrivateKey
 
 	// Certificate is the x509 certificate in base64-d DER format.
 	Certificate string

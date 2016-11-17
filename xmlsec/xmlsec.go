@@ -4,13 +4,15 @@
 package xmlsec
 
 import (
-	"encoding/base64"
-	"encoding/pem"
+	"crypto/rsa"
+	"crypto/x509"
 	"errors"
 	"io/ioutil"
 	"os"
 	"os/exec"
 	"strings"
+
+	jwt "github.com/dgrijalva/jwt-go"
 )
 
 const (
@@ -20,23 +22,28 @@ const (
 )
 
 // SignRequest sign a SAML 2.0 AuthnRequest
-func SignRequest(xml string, privateKey string) (string, error) {
+func SignRequest(xml string, privateKey *rsa.PrivateKey) (string, error) {
 	return sign(xml, privateKey, xmlRequestID)
 }
 
 // SignResponse sign a SAML 2.0 Response
-func SignResponse(xml string, privateKey string) (string, error) {
+func SignResponse(xml string, privateKey *rsa.PrivateKey) (string, error) {
 	return sign(xml, privateKey, xmlResponseID)
 }
 
 // SignRaw sign plain xml
 func SignRaw(xml string, privateKey string) (string, error) {
-	return sign(xml, privateKey, "")
+	// FIXME: This method should also take an *rsa.PrivateKey
+	key, err := jwt.ParseRSAPrivateKeyFromPEM([]byte(privateKey))
+	if err != nil {
+		return "", err
+	}
+
+	return sign(xml, key, "")
 }
 
-func sign(xml string, privateKey string, id string) (string, error) {
-
-	privateKeyFile, err := writeToTemp(privateKey)
+func sign(xml string, privateKey *rsa.PrivateKey, id string) (string, error) {
+	privateKeyFile, err := writePrivateKey(privateKey)
 	if err != nil {
 		return "", err
 	}
@@ -56,7 +63,7 @@ func sign(xml string, privateKey string, id string) (string, error) {
 	samlXmlsecOutput.Close()
 
 	args := []string{
-		"--sign", "--privkey-pem", privateKeyFile.Name(), "--output", samlXmlsecOutput.Name(),
+		"--sign", "--privkey-der", privateKeyFile.Name(), "--output", samlXmlsecOutput.Name(),
 	}
 	if len(id) != 0 {
 		args = append(args, "--id-attr:ID", id)
@@ -203,9 +210,8 @@ func Encrypt(plaintext string, publicKey string) (string, error) {
 }
 
 // Decrypt decrypt an xml cipher value with a third-party public key
-func Decrypt(cipher string, privateKey string) (string, error) {
-
-	privateKeyFile, err := writeToTemp(privateKey)
+func Decrypt(cipher string, privateKey *rsa.PrivateKey) (string, error) {
+	privateKeyFile, err := writePrivateKey(privateKey)
 	if err != nil {
 		return "", err
 	}
@@ -224,7 +230,7 @@ func Decrypt(cipher string, privateKey string) (string, error) {
 	defer deleteTempFile(samlXmlsecOutput.Name())
 	samlXmlsecOutput.Close()
 
-	output, err := exec.Command("xmlsec1", "--decrypt", "--privkey-pem", privateKeyFile.Name(), "--id-attr:ID", "http://www.w3.org/2001/04/xmlenc#EncryptedData",
+	output, err := exec.Command("xmlsec1", "--decrypt", "--privkey-der", privateKeyFile.Name(), "--id-attr:ID", "http://www.w3.org/2001/04/xmlenc#EncryptedData",
 		"--output", samlXmlsecOutput.Name(), samlXmlsecInput.Name()).CombinedOutput()
 	if err != nil {
 		return "", errors.New(err.Error() + " : " + string(output))
@@ -241,13 +247,22 @@ func Decrypt(cipher string, privateKey string) (string, error) {
 // writeToTemp write a string to a temporary file and close
 // Caller is responsible for its lifetime
 func writeToTemp(val string) (*os.File, error) {
+	return writeBytesToTemp([]byte(val))
+}
+
+// writeToTemp write a string to a temporary file and close
+// Caller is responsible for its lifetime
+func writeBytesToTemp(val []byte) (*os.File, error) {
 	f, err := ioutil.TempFile(os.TempDir(), "tf")
 	if err != nil {
 		return nil, err
 	}
 
-	f.WriteString(val)
-	f.Close()
+	defer f.Close()
+
+	if _, err := f.Write(val); err != nil {
+		return nil, err
+	}
 
 	return f, nil
 }
@@ -256,4 +271,9 @@ func writeToTemp(val string) (*os.File, error) {
 // Intended to be called in a defer after the creation of a temp file to ensure cleanup
 func deleteTempFile(filename string) {
 	_ = os.Remove(filename)
+}
+
+func writePrivateKey(privateKey *rsa.PrivateKey) (*os.File, error) {
+	buf := x509.MarshalPKCS1PrivateKey(privateKey)
+	return writeBytesToTemp(buf)
 }

@@ -2,7 +2,6 @@ package samlsp
 
 import (
 	"encoding/base64"
-	"encoding/pem"
 	"encoding/xml"
 	"fmt"
 	"log"
@@ -130,12 +129,11 @@ func (m *Middleware) RequireAccount(handler http.Handler) http.Handler {
 		// we set a cookie that corresponds to the state
 		relayState := base64.URLEncoding.EncodeToString(randomBytes(42))
 
-		secretBlock, _ := pem.Decode([]byte(m.ServiceProvider.Key))
-		state := jwt.New(jwt.GetSigningMethod("HS256"))
+		state := jwt.New(jwt.GetSigningMethod("RS256"))
 		claims := state.Claims.(jwt.MapClaims)
 		claims["id"] = req.ID
 		claims["uri"] = r.URL.String()
-		signedState, err := state.SignedString(secretBlock.Bytes)
+		signedState, err := state.SignedString(m.ServiceProvider.Key)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
 			return
@@ -160,13 +158,15 @@ func (m *Middleware) RequireAccount(handler http.Handler) http.Handler {
 func (m *Middleware) getPossibleRequestIDs(r *http.Request) []string {
 	rv := []string{}
 	for _, cookie := range r.Cookies() {
-		if !strings.HasPrefix(cookie.Name, "saml_") {
+		if !strings.HasPrefix(cookie.Name, "saml_") || cookie.Value == "" {
 			continue
 		}
-		log.Printf("getPossibleRequestIDs: cookie: %s", cookie.String())
 		token, err := jwt.Parse(cookie.Value, func(t *jwt.Token) (interface{}, error) {
-			secretBlock, _ := pem.Decode([]byte(m.ServiceProvider.Key))
-			return secretBlock.Bytes, nil
+			if _, ok := t.Method.(*jwt.SigningMethodRSA); !ok {
+				return nil, fmt.Errorf("Unexpected signing method: %v", t.Header["alg"])
+			}
+
+			return m.ServiceProvider.Key.Public(), nil
 		})
 		if err != nil || !token.Valid {
 			log.Printf("... invalid token %s", err)
@@ -188,8 +188,6 @@ func (m *Middleware) getPossibleRequestIDs(r *http.Request) []string {
 // It sets a cookie that contains a signed JWT containing the assertion attributes.
 // It then redirects the user's browser to the original URL contained in RelayState.
 func (m *Middleware) Authorize(w http.ResponseWriter, r *http.Request, assertion *saml.Assertion) {
-	secretBlock, _ := pem.Decode([]byte(m.ServiceProvider.Key))
-
 	redirectURI := "/"
 	if r.Form.Get("RelayState") != "" {
 		stateCookie, err := r.Cookie(fmt.Sprintf("saml_%s", r.Form.Get("RelayState")))
@@ -200,7 +198,11 @@ func (m *Middleware) Authorize(w http.ResponseWriter, r *http.Request, assertion
 		}
 
 		state, err := jwt.Parse(stateCookie.Value, func(t *jwt.Token) (interface{}, error) {
-			return secretBlock.Bytes, nil
+			if _, ok := t.Method.(*jwt.SigningMethodRSA); !ok {
+				return nil, fmt.Errorf("Unexpected signing method: %v", t.Header["alg"])
+			}
+
+			return m.ServiceProvider.Key.Public(), nil
 		})
 		if err != nil || !state.Valid {
 			log.Printf("Cannot decode state JWT: %s (%s)", err, stateCookie.Value)
@@ -216,7 +218,7 @@ func (m *Middleware) Authorize(w http.ResponseWriter, r *http.Request, assertion
 		http.SetCookie(w, stateCookie)
 	}
 
-	token := jwt.New(jwt.GetSigningMethod("HS256"))
+	token := jwt.New(jwt.GetSigningMethod("RS256"))
 	claims := token.Claims.(jwt.MapClaims)
 	for _, attr := range assertion.AttributeStatement.Attributes {
 		valueStrings := []string{}
@@ -230,7 +232,7 @@ func (m *Middleware) Authorize(w http.ResponseWriter, r *http.Request, assertion
 		claims[claimName] = valueStrings
 	}
 	claims["exp"] = saml.TimeNow().Add(cookieMaxAge).Unix()
-	signedToken, err := token.SignedString(secretBlock.Bytes)
+	signedToken, err := token.SignedString(m.ServiceProvider.Key)
 	if err != nil {
 		panic(err)
 	}
@@ -263,8 +265,11 @@ func (m *Middleware) IsAuthorized(r *http.Request) bool {
 		return false
 	}
 	token, err := jwt.Parse(cookie.Value, func(t *jwt.Token) (interface{}, error) {
-		secretBlock, _ := pem.Decode([]byte(m.ServiceProvider.Key))
-		return secretBlock.Bytes, nil
+		if _, ok := t.Method.(*jwt.SigningMethodRSA); !ok {
+			return nil, fmt.Errorf("Unexpected signing method: %v", t.Header["alg"])
+		}
+
+		return m.ServiceProvider.Key.Public(), nil
 	})
 	if err != nil || !token.Valid {
 		return false
